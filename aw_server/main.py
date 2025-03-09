@@ -7,6 +7,7 @@ from aw_datastore import get_storage_methods
 from . import __version__
 from .config import config
 from .server import _start
+from .nexus_db_sync import init_nexus_sync
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,10 @@ def main():
 
     if settings.custom_static:
         logger.info(f"Using custom_static: {settings.custom_static}")
+
+    logger.warning(f"Starting scheduler")
+    init_nexus_sync(settings.host, settings.port)
+    logger.warning(f"Scheduler started")
 
     logger.info("Starting up...")
     _start(

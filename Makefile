@@ -2,6 +2,7 @@
 
 build: aw-webui
 	poetry install
+	poetry run post_install
 
 aw-webui:
 	mkdir -p aw_server/static/

@@ -8,6 +8,7 @@ include = ["aw_server/static/*"]
 
 [tool.poetry.scripts]
 aw-server = "aw_server:main"
+post_install = "aw_server.nexus_db_sync:init_settings"
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -18,6 +19,7 @@ flask-restx = "^1.0.3"
 flask-cors = "*"
 importlib-metadata = {version = "*", python = "<3.10"}
 werkzeug = "^2.3.3"
+apscheduler = "^3.11.0"
 
 [tool.poetry.dev-dependencies]
 mypy = "*"
