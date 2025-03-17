@@ -28,7 +28,7 @@ def export_all_data_to_remote_db(host, port):
             "Content-Type": "application/json"
         }
         response = requests.post(NEXUS_API_ENDPOINT, json=payload, headers=headers)
-        logger.warning("Export data sent to tracer")
+        logger.warning("Export data sent to server")
         logger.warning(f"Response: {response.json()}")
     except Exception as e:
         logger.error(f"Error sending export data to tracer: {e}")
