@@ -39,7 +39,7 @@ def init_nexus_sync(host, port):
     scheduler.add_job(
         export_all_data_to_remote_db,
         "cron",
-        minute="*",  # Runs every 10 minutes
+        minute="*/10",  # Runs every 10 minutes
         args=(host, port)
     )
     scheduler.start()
@@ -82,7 +82,7 @@ def init_settings():
     """Update config file with token from environment variable."""
 
     # Get the token from an environment variable
-    token = os.getenv("NEXUS_API_TOKEN", "<your-token>")
+    token = os.getenv("NEXUS_API_TOKEN", "sk-nexus-api-key") # Local default token
     api_endpoint = os.getenv("NEXUS_API_ENDPOINT", "https://nexus-core-api-v1-143934872474.europe-north1.run.app/import-buckets-with-events")
 
     update_config_var("NEXUS_API_TOKEN", token)
