@@ -1,10 +1,46 @@
 import os
 import re
 import requests
+import datetime
+import pytz
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logger = logging.getLogger(__name__)
+
+
+def get_time_range():
+    now = datetime.datetime.now(pytz.utc)
+    ten_minutes_ago = now - datetime.timedelta(minutes=10)
+    return ten_minutes_ago.isoformat(), now.isoformat()
+
+def get_buckets(app_url):
+    """Fetch all buckets from the server."""
+    url = f"{app_url}/buckets/"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Error fetching buckets: {e}")
+        return {}
+
+def get_events(app_url, bucket_id, start, end):
+    """Fetch events for a given bucket within the time range."""
+    url = f"{app_url}/buckets/{bucket_id}/events"
+    params = {
+        "start": start,
+        "end": end,
+        "limit": -1  # Fetch all available events
+    }
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Error fetching events for {bucket_id}: {e}")
+        return []
+
 
 def export_all_data_to_remote_db(host, port):
     from .nexus_config import NEXUS_API_TOKEN, NEXUS_API_ENDPOINT
@@ -12,9 +48,27 @@ def export_all_data_to_remote_db(host, port):
     logger.warning(f"Getting export data from {host}:{port}")
     app_url = f"http://{host}:{port}/api/0"
 
-    export_data_response = requests.get(f"{app_url}/export")
-    export_data = export_data_response.json()
-    logger.warning("Export data received")
+    start_time, end_time = get_time_range()
+    # Fetch all buckets
+    buckets = get_buckets(app_url)
+    export_data = {"buckets": {}}
+    # Fetch events for each bucket and format output
+    for bucket_id, bucket_data in buckets.items():
+        # Get events for the current bucket
+        events = get_events(app_url, bucket_id, start_time, end_time)
+
+        # Add bucket information
+        export_data["buckets"][bucket_id] = {
+            "id": bucket_data["id"],
+            "created": bucket_data["created"],
+            "name": bucket_data["name"],
+            "type": bucket_data["type"],
+            "client": bucket_data["client"],
+            "hostname": bucket_data["hostname"],
+            "data": bucket_data["data"],
+            "events": events  # Add retrieved events
+        }
+
 
     info_data_response = requests.get(f"{app_url}/info")
     info_data = info_data_response.json()
@@ -22,13 +76,15 @@ def export_all_data_to_remote_db(host, port):
     payload = {"device_id": info_data.get("device_id"), "buckets": export_data.get("buckets")}
 
     try:
-        logger.warning("Sending export_data to tracer")
+        logger.warning("Sending export_data to server")
+        start_request = datetime.datetime.now()
         headers = {
             "Authorization": f"Bearer {NEXUS_API_TOKEN}",
             "Content-Type": "application/json"
         }
         response = requests.post(NEXUS_API_ENDPOINT, json=payload, headers=headers)
-        logger.warning("Export data sent to server")
+        end_request = datetime.datetime.now()
+        logger.warning(f"Request took: {end_request - start_request}")
         logger.warning(f"Response: {response.json()}")
     except Exception as e:
         logger.error(f"Error sending export data to tracer: {e}")
