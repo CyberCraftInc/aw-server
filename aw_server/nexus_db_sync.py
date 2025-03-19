@@ -45,13 +45,14 @@ def get_events(app_url, bucket_id, start, end):
 def export_all_data_to_remote_db(host, port):
     from .nexus_config import NEXUS_API_TOKEN, NEXUS_API_ENDPOINT
 
-    logger.warning(f"Getting export data from {host}:{port}")
+    logger.info(f"Getting export data from {host}:{port}")
     app_url = f"http://{host}:{port}/api/0"
 
     start_time, end_time = get_time_range()
     # Fetch all buckets
     buckets = get_buckets(app_url)
     export_data = {"buckets": {}}
+    event_count = 0
     # Fetch events for each bucket and format output
     for bucket_id, bucket_data in buckets.items():
         # Get events for the current bucket
@@ -68,15 +69,16 @@ def export_all_data_to_remote_db(host, port):
             "data": bucket_data["data"],
             "events": events  # Add retrieved events
         }
+        event_count += len(events)
 
 
     info_data_response = requests.get(f"{app_url}/info")
     info_data = info_data_response.json()
-    logger.warning(f"Info data received: {info_data}")
+    logger.info(f"Info data received: {info_data}")
     payload = {"device_id": info_data.get("device_id"), "buckets": export_data.get("buckets")}
 
     try:
-        logger.warning("Sending export_data to server")
+        logger.info("Sending export_data to server")
         start_request = datetime.datetime.now()
         headers = {
             "Authorization": f"Bearer {NEXUS_API_TOKEN}",
@@ -84,8 +86,9 @@ def export_all_data_to_remote_db(host, port):
         }
         response = requests.post(NEXUS_API_ENDPOINT, json=payload, headers=headers)
         end_request = datetime.datetime.now()
-        logger.warning(f"Request took: {end_request - start_request}")
-        logger.warning(f"Response: {response.json()}")
+        logger.info(f"Event count: {event_count}")
+        logger.info(f"Request took: {end_request - start_request}")
+        logger.info(f"Response: {response.json()}")
     except Exception as e:
         logger.error(f"Error sending export data to tracer: {e}")
 
